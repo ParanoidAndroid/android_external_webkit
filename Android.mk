@@ -26,7 +26,7 @@
 # Control SVG compiling in webkit.
 # Default is true unless explictly disabled.
 ifneq ($(ENABLE_SVG),false)
-    ENABLE_SVG = true
+    ENABLE_SVG := true
 endif
 
 # Control complex scripts support compiling in webkit.
@@ -42,6 +42,19 @@ ifneq ($(ENABLE_AUTOFILL),false)
   ENABLE_AUTOFILL = true
 endif
 
+# Custom y-to-cpp rule
+define webkit-transform-y-to-cpp
+@mkdir -p $(dir $@)
+@echo "WebCore Yacc: $(PRIVATE_MODULE) <= $<"
+$(hide) $(YACC) $(PRIVATE_YACCFLAGS) -o $@ $<
+@touch $(@:$1=$(YACC_HEADER_SUFFIX))
+@echo '#ifndef '$(@F:$1=_h) > $(@:$1=.h)
+@echo '#define '$(@F:$1=_h) >> $(@:$1=.h)
+@cat $(@:$1=$(YACC_HEADER_SUFFIX)) >> $(@:$1=.h)
+@echo '#endif' >> $(@:$1=.h)
+@rm -f $(@:$1=$(YACC_HEADER_SUFFIX))
+endef
+
 BASE_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
@@ -53,8 +66,6 @@ base_intermediates := $(call local-intermediates-dir)
 # Using := here prevents recursive expansion
 WEBKIT_SRC_FILES :=
 
-# We have to use bison 2.3
-include $(BASE_PATH)/bison_check.mk
 
 SOURCE_PATH := $(BASE_PATH)/Source
 WEBCORE_PATH := $(SOURCE_PATH)/WebCore
@@ -86,7 +97,8 @@ LOCAL_C_INCLUDES := \
 	external/skia/include/images \
 	external/skia/include/ports \
 	external/skia/include/utils \
-	external/skia/src/gpu \
+	external/skia/src/core \
+	external/skia/src/images \
 	external/skia/src/ports \
 	external/sqlite/dist \
 	frameworks/base/core/jni/android/graphics \
@@ -299,8 +311,8 @@ LOCAL_SHARED_LIBRARIES := \
 	libgui \
 	libicuuc \
 	libicui18n \
+	liblog \
 	libmedia \
-	libmedia_native \
 	libnativehelper \
 	libskia \
 	libsqlite \
@@ -325,7 +337,7 @@ LOCAL_CFLAGS += -DSUPPORT_COMPLEX_SCRIPTS=1
 endif
 
 # Build the list of static libraries
-LOCAL_STATIC_LIBRARIES := libxml2 libxslt libhyphenation libskiagpu libv8
+LOCAL_STATIC_LIBRARIES := libxml2 libxslt libhyphenation libv8
 
 ifeq ($(ENABLE_AUTOFILL),true)
 LOCAL_SHARED_LIBRARIES += libexpat
